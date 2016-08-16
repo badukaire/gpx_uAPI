@@ -1,4 +1,8 @@
-"""
+import sys
+import string
+
+class PaceSpeed :
+  """
 Calculates speed (m/s, km/h) and pace (mins/km) for a given set of
 time and distance pairs, i.e. from a running session.
 
@@ -33,15 +37,11 @@ $ python PaceSpeed.py f.txt
 $ cat f.txt | python PaceSpeed.py
 $ python PaceSpeed.py "3'34''" 0.89 # notice use of ""
 $ python PaceSpeed.py 3,34,, 0.89 # commas may also be used
+$ python PaceSpeed.py -h # display this help text
 
 The output displays the speed for each set in m/s, km/h and mins/km (pace).
 
-"""
-
-import sys
-import string
-
-class PaceSpeed :
+  """
 
   def __init__( self, psInputFile = None ) :
 
@@ -285,8 +285,17 @@ class PaceSpeed :
 if __name__ == "__main__" :
 
   liArgc = len( sys.argv )
-  # only 1 distance
-  if liArgc > 2 :
+
+  # command-line parameters, check them without getopt
+  if liArgc > 1 :
+
+   for lsArg in sys.argv :
+    if lsArg == "-h" :
+      print PaceSpeed.__doc__
+      sys.exit( 0 )
+
+   # only 1 distance
+   if liArgc > 2 :
 
     liSecs, lbRel = PaceSpeed.parseTime( sys.argv[ 1 ] )
     if liSecs == None : sys.exit( 1 )
@@ -295,8 +304,8 @@ if __name__ == "__main__" :
   
     PaceSpeed.display( liSecs, lfDist )
 
-  # use a file / stdin
-  else :
+   # use a file / stdin
+   else :
 
     if liArgc > 1 :
       # use file
