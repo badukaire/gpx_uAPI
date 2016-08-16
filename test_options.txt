@@ -1,0 +1,11 @@
+python marc.py -D 0:33:33
+python marc.py -D 0:33:33 -n 1
+python marc.py -D 0:33:33 -s 1
+python marc.py -D 0:33:33 -n 1 SAdBesq.gpx 
+python marc.py -D 0:33:33gd
+python marc.py -s 2
+python marc.py -s 2 -D 0:33:11
+python marc.py -s 2 -D 0:33:11
+python marc.py -S a.txt
+python marc.py -X a.txt
+python marc.py -o a.txt

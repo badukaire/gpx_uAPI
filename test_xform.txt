@@ -1,0 +1,2 @@
+python marc.py -o s2.gpx -D "0:17:43" -T "2016-08-20 20:17:00" -n 1 -s 2 s1.gpx
+python marc.py -d t -n 1 -s 2 SAdBesq.gpx
