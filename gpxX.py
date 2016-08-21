@@ -30,6 +30,7 @@ def usage() :
   print "* -o <file>: output file, compulsory for GPX-data transforming options"
   print "* -T <datetime>: reset initial time to provided ISO-format datetime"
   print "* -D <duration>: track duration (-n must be specified / max 24h)"
+  print "* -X <command file>: file with sets of -T/-D/-n/-s options"
   print ""
   print "Examples: (must have at least a -d or -D/-T or -X option)"
   print "python gpxX.py -h"
@@ -39,6 +40,8 @@ def usage() :
   print "python gpxX.py -T \"2016-06-06 12:00:01\" -o jun06.gpx"
   print "python gpxX.py -n 2 -T \"2016-06-06 12:00:01\" -o jun06.gpx"
   print "python gpxX.py -n 2 -D 2:03:01 -T \"2016-06-06 12:00:01\" -o jun06.gpx"
+  print "python gpxX.py -n 2 -s 1 -D 2:03:01 -T \"2016-06-06 12:00:01\" -o jun06.gpx"
+  print "python gpxX.py -X setJun06.txt -o jun06.gpx"
 
 
 def checkOptions( pListParams ) :
@@ -46,7 +49,7 @@ def checkOptions( pListParams ) :
   global gsFileGPX
   print( "checkOptions, args:", pListParams )
   try:
-    lOptList, lList = getopt.getopt( pListParams, 'o:D:T:s:n:d:hv' )
+    lOptList, lList = getopt.getopt( pListParams, 'X:o:D:T:s:n:d:hv' )
 
   except getopt.GetoptError:
     eprint( "FATAL : error analyzing command line options (unknown/bad formatted option?)" )
@@ -121,6 +124,11 @@ def checkOptions( pListParams ) :
       global gsOutput
       gsOutput = lsVal
       print "output file (-o) : %s" % ( gsOutput )
+    elif lOpt[0] == "-X" :
+      lsVal = lOpt[1]
+      global gsXformFile
+      gsXformFile = lsVal
+      print "transform command file (-X) : %s" % ( gsXformFile )
     elif lOpt[0] == "-D" :
       lsVal = lOpt[1]
       try :
@@ -158,6 +166,113 @@ def checkOptions( pListParams ) :
       #gsFileGPX = lList[ 0 ]
 
 
+def cleanXformOpts() :
+  """
+  cleans up transform options
+  to be called only when using command file (-X)
+  """
+  global giWhich, giSegment
+  global gDurationNew, gDTnew
+
+  giWhich = 0
+  giSegment = 0
+  gDurationNew = None
+  gDTnew = None
+
+
+def validateOptionsXform() :
+  global giAction
+  global gsXformFile
+  global giWhich, giSegment
+  global gDurationNew, gDTnew
+  global gbDispWaypts, gbDispTracks, gbDispRoutes
+
+  lbOK = True
+  if not gsXformFile == None :
+    lbOK == False
+    print "ERROR, -X cant be set on file"
+  if gbDispWaypts == True or gbDispTracks == True or gbDispRoutes == True :
+    lbOK == False
+    print "ERROR, -d cant be set on transform file"
+  if not gsOutput == None :
+    lbOK = False
+    print "ERROR : option -o can NOT be set on transform file"
+  # TODO : from here, there should be a "validateTransform" method
+  # that is called from here and and validateOptions, with the 
+  # same conditions
+  if giWhich == 0 : 
+    lbOK = False
+    print "ERROR : -n must be set on transform file"
+  if giSegment > 0 :
+    if giWhich == 0 :
+      lbOK = False
+      print "ERROR : if option -s is set, -n must be set too"
+  if gDurationNew == None and gDTnew == None :
+    lbOK = False
+    print "ERROR : -T and/or -D must be set on transform file"
+  return lbOK
+
+
+def validateOptions() :
+  global giAction # is set here? TODO : check if == 0
+  global gsXformFile
+  global giWhich, giSegment
+  global gDurationNew, gDTnew
+  global gbDispWaypts, gbDispTracks, gbDispRoutes
+
+  lbOK = True
+  if not gsXformFile == None :
+    giAction = 2 # transform XML
+    giAction += 4 # transform XML with file (2 + 4 = bits 1 and 2)
+    if giWhich == 0 and giSegment == 0 and gDurationNew == None and gDTnew == None :
+      if gsOutput == None :
+        lbOK = False
+        print "ERROR : if option -X is set, -o must be set too"
+    else :
+      lbOK = False
+      print "ERROR : if option -X is set, -n, -s, -T and -D must NOT be set"
+    # TODO : check display options => ERROR
+  else :
+    # display options?
+    if gbDispWaypts == True or gbDispTracks == True or gbDispRoutes == True :
+      giAction = 1 # display
+      if not ( gDurationNew == None and gDTnew == None ) :
+        lbOK = False
+        print "ERROR : if option -d, -D and -T must NOT be set"
+
+    # transformation options?
+    # no need to check if -d is set, this is done above
+    elif not ( gDurationNew == None and gDTnew == None ) :
+      giAction = 2 # transform XML
+      if gsOutput == None :
+        lbOK = False
+        print "ERROR : if option -D or -T is set, -o must be set too"
+      # this is not an error
+      """
+      if not gDurationNew == None :
+        if gDTnew == None :
+          lbOK = False
+      """
+      if giWhich == 0 : 
+        lbOK = False
+        print "ERROR : if option -T or -D is set, -n must be set too"
+
+    else :
+      if not gsOutput == None :
+        lbOK = False
+        print "ERROR : if option -o is set, other options must be set too"
+
+      lbOK = False
+      print "ERROR : must have at least a -d or -D/-T option"
+
+    # aixo sempre es mira
+    if giSegment > 0 :
+      if giWhich == 0 :
+        lbOK = False
+        print "ERROR : if option -s is set, -n must be set too"
+
+  return lbOK
+
 
 def dispPoint( pPoint ) :
   print "Point at ({0},{1}) -> {2}".format( pPoint.latitude, pPoint.longitude, pPoint.elevation )
@@ -165,14 +280,20 @@ def dispPoint( pPoint ) :
 
 
 def resetTrackTime() :
-  lbOK = True
+  global gXmlGPX
+  global gDTnew
+  global gDurationNew
   global giSegment
   global giWhich
   global gDTnew
+
+  lbOK = True
   lDurationNew = None
   lTimeIni = None
+  lTimeEnd = None
+  lbProcessed = False
   liTrack = 0
-  for lTrack in gXmlGPX.tracks:
+  for lTrack in gXmlGPX.tracks :
     lbDontTouch = False
     liTrack += 1
     print "track #%d ..." % liTrack
@@ -182,7 +303,6 @@ def resetTrackTime() :
         print "track #%d, dont touch anything ..." % liTrack
         lbDontTouch = True
       else :
-        global gDurationNew
         if not gDurationNew == None :
           lDurationNew = gDurationNew
           print "will adjust track time to fit into a %s duration" % ( str( gDurationNew ) )
@@ -192,12 +312,11 @@ def resetTrackTime() :
     print "============="
     print "track #%d name:%s:" % ( liTrack, lTrack.name )
     liSegment = 0
-    for lSegment in lTrack.segments:
+    for lSegment in lTrack.segments :
       lbDontTouch = False
       liSegment += 1
       print "--"
       print "segment #%d ..." % liSegment
-      global giSegment
       if giSegment > 0 :
         print "giSegment = %d" % giSegment
         if not liSegment == giSegment :
@@ -217,38 +336,75 @@ def resetTrackTime() :
       #lSegmentOut = gpx.GPXTrackSegment()
       print "--"
       print "segment #%d, track #%d" % ( liSegment, liTrack )
-      for lPoint in lSegment.points:
+      for lPoint in lSegment.points :
        if lbDontTouch == False :
+        lbProcessed = True
         if lTimeIni == None :
           print "lTimeIni == None ..."
           lDT = lPoint.time
           print lDT
-          lTdiff = gDTnew - lDT
-          print "=>", gDTnew
-          print "time diff:", lTdiff
-          lDTnew = lDT + lTdiff
-          print "new initial time:", lDTnew
-          lTimeIni = lDTnew
-        dispPoint( lPoint )
+          if gDTnew == None :
+            # FIXME this is ugly ...
+            lTdiff = gTdiffZero
+            print "NO initial time diff"
+            #print lTdiff.__class__
+            if not lTimeEnd == None :
+              lDTnew = lTimeEnd
+              print "initial time diff as end time last segment: %s" % ( lDTnew )
+            else :
+              lDTnew = lDT
+              print "initial time diff as in original: %s" % ( lDTnew )
+            lTimeIni = lDTnew
+          else :
+            lTdiff = gDTnew - lDT
+            print "=>", gDTnew
+            print "time diff:", lTdiff
+            lDTnew = lDT + lTdiff
+            print "new initial time:", lDTnew
+            lTimeIni = lDTnew
+        if gbVerbose == True :
+          dispPoint( lPoint )
         print "=>"
         #lPoint2 = gpx.GPXTrackPoint()
         if lDurationNew == None :
           lPoint.time += lTdiff
         else :
-          lPoint.time = gDTnew
+          """
+          if gDTnew == None :
+            print "NONE gDTnew"
+            lPoint.time = lTimeIni
+          """
+          lPoint.time = lDTnew
+          #print "lDTaccu", lDTaccu
           lPoint.time += lDTaccu
           lDTaccu += lTDpoint
           print "lDTaccu:", lDTaccu
         dispPoint( lPoint )
-       else :
+       else : # if lbDontTouch == False :
         dispPoint( lPoint )
+       lTimeEnd = lPoint.time
        print "----"
       print "end of segment #%d, lTrack #%d" % ( liSegment, liTrack )
       print "----"
     print "end of track #%d" % ( liTrack )
     print "--------"
-    print ""
+
+  if lbProcessed == True :
+    print "transform finished, processing done"
+  else :
+    print "transform finished, NO processing done"
+    lbOK = False
+  print "--------"
+  print ""
+
+  return lbOK
+
+
+def writeOutput() :
   global gsOutput
+  global gXmlGPX
+
+  lbOK = True
   print "write new XML into %s file ..." % ( gsOutput )
   try :
     lFileOut = open( gsOutput, "w" )
@@ -353,6 +509,50 @@ def display() :
     print "================"
     print ""
 
+
+def readXformFile( psXformFile ) :
+  """
+  psXformFile : input, the file name (string)
+  lListXforms : output, the transform commands list (None if error)
+  """
+  lListXforms = None
+  lbOK = True
+  try :
+    lFile = open( psXformFile, "r" )
+  except :
+    eprint( "FATAL: could not open file %s, quitting ..." % ( gsFileGPX ) )
+    return lListXforms
+
+  print "checking lines in command file %s ..." % ( psXformFile )
+  liLine = 0
+  lList = []
+  for ls in lFile.readlines() :
+    liLine += 1
+    if not ls.startswith( "#" ) :
+      lss = ls.split()
+      print "line #%d split: %s" % ( liLine, lss )
+      if len( lss ) > 0 :
+        cleanXformOpts()
+        checkOptions( lss ) # this may exit!
+        if validateOptionsXform() == False :
+          print "line #%d validation on file %s failed" % ( liLine, psXformFile )
+          lbOK = False
+          #break
+        else :
+          lList.append( lss )
+          #print lList
+    else :
+      print "# ..."
+    print "--"
+  lFile.close()
+  if lbOK == True :
+    print "successful command file reading"
+    lListXforms = lList
+  else :
+    print "ERROR, command file reading failed"
+  return lListXforms
+
+
 def setOpenFile( psFileGPX ) :
   """
   psFileGPX : input, the file name (string)
@@ -387,8 +587,11 @@ def parseGpxFile( pFileGPX ) :
 
   return lXmlGPX
 
+
+
 # main starts here
 
+giAction = 0 # default, no action
 gbVerbose = False
 gbDispTracks = False
 gbDispWaypts = False
@@ -396,6 +599,7 @@ gbDispRoutes = False
 giWhich = 0
 giSegment = 0
 
+gsXformFile = None
 gsFileGPX = None
 gsOutput = None
 gDTnew = None
@@ -416,6 +620,16 @@ if not lListParams == None :
     usage()
     sys.exit( 1 )
   # TODO : use a backup of gsXformFile when reading the file for unsetting and validating
+  if not gsXformFile == None :
+    lsXformFile = gsXformFile # backup
+    gsXformFile = None
+    lsOutput = gsOutput # backup
+    gsOutput = None
+    gListXforms = readXformFile( lsXformFile )
+    if gListXforms == None :
+      sys.exit( 1 )
+    gsXformFile = lsXformFile # restore
+    gsOutput = lsOutput # restore
 
 gFileGPX = setOpenFile( gsFileGPX )
 if gFileGPX == None :
@@ -425,10 +639,38 @@ gXmlGPX = parseGpxFile( gFileGPX )
 if gXmlGPX == None :
   sys.exit( 1 )
 
-if gbDispTracks == False and gbDispWaypts == False and gbDispRoutes == False :
+if not giAction == 1 : # transform, NO display?
   print "transform GPX data ..."
-  if resetTrackTime() == False :
-    sys.exit( 1 )
+  if not gsXformFile == None :
+    liXform = 0
+    for lXforms in gListXforms :
+      liXform += 1
+      print "process transform #%d ..." % ( liXform )
+      cleanXformOpts()
+      checkOptions( lXforms ) # NO errors now, no need to validate
+      lbOK = resetTrackTime()
+      print "transform #%d result=%s" % ( liXform, str( lbOK ) )
+      print "----"
+      if lbOK == False :
+        print "WARNING : transform #%d did NOT do anything" % ( liXform )
+        #break
+  else :
+    # uses cmd-line options set
+    lbOK = resetTrackTime()
+    print "transform result=%s" % ( str( lbOK ) )
+
+  # only 1 shared write
+  lbOK = writeOutput()
+  if lbOK == False :
+    print "ERROR, could not write XML to %s" % ( gsOutput )
+  else :
+    print "XML written into to %s OK!" % ( gsOutput )
+
 else : # display
+
   display()
 
+print ""
+print "======"
+print "DONE"
+print "======"
