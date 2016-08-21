@@ -146,9 +146,9 @@ def checkOptions( pListParams ) :
     elif lOpt[0] == "-T" :
       lsVal = lOpt[1]
       try :
-        lDTval = datetime.strptime( lsVal, "%Y-%m-%d %H:%M:%S" )
+        lDTval = datetime.strptime( lsVal, "%Y-%m-%dT%H:%M:%S" )
       except :
-        eprint( "FATAL: %s (-T) not a valid ISO-format datetime" % lsVal )
+        eprint( "FATAL: %s (-T) not a valid ISO-format (like \"2016-08-20T13:09:47\") datetime" % lsVal )
         usage()
         sys.exit( 1 )
       if not lDTval == None :
@@ -563,6 +563,7 @@ def readXformFile( psXformFile ) :
     if not ls.startswith( "#" ) :
       lss = ls.split()
       print "line #%d split: %s" % ( liLine, lss )
+      # TODO : check if some option "-?" has more than 2 params => join with blank
       if len( lss ) > 0 :
         cleanXformOpts()
         checkOptions( lss ) # this may exit!
