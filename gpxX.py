@@ -24,6 +24,7 @@ def usage() :
   print "* -d <displayWhat>: what to display"
   print "  <displayWhat> can be: r/routes, w/waypoints, t/tracks"
   print "* -n <displayWhich>: which one to display (number starting by 1)"
+  print "* -s <segment>: which segment to display/edit (number starting by 1)"
   print "* -o <file>: output file, compulsory for GPX-data transforming options"
   print "* -T <datetime>: reset initial time to provided ISO-format datetime"
   print "* -D <duration>: track duration (-n must be specified / max 24h)"
@@ -43,7 +44,7 @@ def checkOptions( pListParams ) :
   global gsFileGPX
   print( "checkOptions, args:", pListParams )
   try:
-    lOptList, lList = getopt.getopt( pListParams, 'o:D:T:n:d:hv' )
+    lOptList, lList = getopt.getopt( pListParams, 'o:D:T:s:n:d:hv' )
 
   except getopt.GetoptError:
     eprint( "FATAL : error analyzing command line options" )
@@ -64,6 +65,22 @@ def checkOptions( pListParams ) :
       global gbVerbose
       gbVerbose = True
       print "will be verbose (many output)"
+    elif lOpt[0] == "-s" :
+      lsVal = lOpt[1]
+      try :
+        liVal = int( lsVal )
+      except :
+        eprint( "FATAL: %s not a valid segment number" % lsVal )
+        eprint( "" )
+        usage()
+        sys.exit( 1 )
+      if liVal > 0 :
+        global giSegment
+        giSegment = liVal
+      else :
+        eprint( "FATAL: %d must be >= 1" % liVal )
+        usage()
+        sys.exit( 1 )
     elif lOpt[0] == "-n" :
       lsVal = lOpt[1]
       try :
@@ -143,19 +160,21 @@ def dispPoint( pPoint ) :
 
 
 def resetTrackTime() :
+  global giSegment
   global giWhich
   global gDTnew
   lDurationNew = None
   lTimeIni = None
   liTrack = 0
   for lTrack in gXmlGPX.tracks:
+    lbDontTouch = False
     liTrack += 1
     print "track #%d ..." % liTrack
     if giWhich > 0 :
       print "giWhich = %d" % giWhich
       if not liTrack == giWhich :
-        print "skip track #%d" % liTrack
-        continue
+        print "track #%d, dont touch anything ..." % liTrack
+        lbDontTouch = True
       else :
         global gDurationNew
         if not gDurationNew == None :
@@ -168,7 +187,16 @@ def resetTrackTime() :
     print "track #%d name:%s:" % ( liTrack, lTrack.name )
     liSegment = 0
     for lSegment in lTrack.segments:
+      lbDontTouch = False
       liSegment += 1
+      print "--"
+      print "segment #%d ..." % liSegment
+      global giSegment
+      if giSegment > 0 :
+        print "giSegment = %d" % giSegment
+        if not liSegment == giSegment :
+          print "segment #%d, dont touch anything" % liSegment
+          lbDontTouch = True
 
       # TODO : count points for all segments first, for splitting time
       # <trkseg>
@@ -184,6 +212,7 @@ def resetTrackTime() :
       print "--"
       print "segment #%d, track #%d" % ( liSegment, liTrack )
       for lPoint in lSegment.points:
+       if lbDontTouch == False :
         if lTimeIni == None :
           print "lTimeIni == None ..."
           lDT = lPoint.time
@@ -205,7 +234,9 @@ def resetTrackTime() :
           lDTaccu += lTDpoint
           print "lDTaccu:", lDTaccu
         dispPoint( lPoint )
-        print "----"
+       else :
+        dispPoint( lPoint )
+       print "----"
       print "end of segment #%d, lTrack #%d" % ( liSegment, liTrack )
       print "----"
     print "end of track #%d" % ( liTrack )
@@ -240,7 +271,14 @@ def dispTracks() :
     liSegment = 0
     for lSegment in lTrack.segments:
       liSegment += 1
+      print "segment #%d ..." % liSegment
       print "--"
+      global giSegment
+      if giSegment > 0 :
+        print "giSegment = %d" % giSegment
+        if not liSegment == giSegment :
+          print "skip segment #%d" % liSegment
+          continue
       print "segment #%d, track #%d" % ( liSegment, liTrack )
       for lPoint in lSegment.points:
         if lTimeIni == None :
@@ -286,6 +324,7 @@ gbDispTracks = False
 gbDispWaypts = False
 gbDispRoutes = False
 giWhich = 0
+giSegment = 0
 
 gsFileGPX = None
 gsOutput = None
