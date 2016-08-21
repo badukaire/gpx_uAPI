@@ -40,7 +40,7 @@ def checkOptions( pListParams ) :
   global gsFileGPX
   print( "checkOptions, args:", pListParams )
   try:
-    lOptList, lList = getopt.getopt( pListParams, 'o:T:n:d:h' )
+    lOptList, lList = getopt.getopt( pListParams, 'o:T:n:d:hv' )
 
   except getopt.GetoptError:
     eprint( "FATAL : error analyzing command line options" )
@@ -57,6 +57,10 @@ def checkOptions( pListParams ) :
     if lOpt[0] == '-h' :
       usage()
       sys.exit( 0 )
+    elif lOpt[0] == '-v' :
+      global gbVerbose
+      gbVerbose = True
+      print "will be verbose (many output)"
     elif lOpt[0] == "-n" :
       lsVal = lOpt[1]
       try :
@@ -234,6 +238,7 @@ def dispRoutes() :
 
 # main starts here
 
+gbVerbose = False
 gbDispTracks = False
 gbDispWaypts = False
 gbDispRoutes = False
@@ -245,6 +250,8 @@ gDTnew = None
 
 liArgs = len( sys.argv )
 if liArgs < 2 :
+  # FIXME : if just -v, would be the same case
+  # FIXME : this is not a good way
   print "NO params provided => will read from stdin and display everything"
   lFileGPX = sys.stdin
   gbDispTracks = True
