@@ -24,8 +24,9 @@ def usage() :
   print "* -d <displayWhat>: what to display"
   print "  <displayWhat> can be: r/routes, w/waypoints, t/tracks"
   print "* -n <displayWhich>: which one to display (number starting by 1)"
-  print "* -T <datetime>: reset initial time to provided ISO-format datetime"
   print "* -o <file>: output file, compulsory for GPX-data transforming options"
+  print "* -T <datetime>: reset initial time to provided ISO-format datetime"
+  print "* -D <duration>: track duration (-n must be specified / max 24h)"
   print ""
   print "Examples:"
   print "python gpxX.py -h"
@@ -33,6 +34,8 @@ def usage() :
   print "python gpxX.py -d waypoints -d t"
   print "python gpxX.py -d tracks -n 2"
   print "python gpxX.py -T \"2016-06-06 12:00:01\" -o jun06.gpx"
+  print "python gpxX.py -n 2 -T \"2016-06-06 12:00:01\" -o jun06.gpx"
+  print "python gpxX.py -n 2 -D 2:03:01 -T \"2016-06-06 12:00:01\" -o jun06.gpx"
 
 
 def checkOptions( pListParams ) :
@@ -40,7 +43,7 @@ def checkOptions( pListParams ) :
   global gsFileGPX
   print( "checkOptions, args:", pListParams )
   try:
-    lOptList, lList = getopt.getopt( pListParams, 'o:T:n:d:hv' )
+    lOptList, lList = getopt.getopt( pListParams, 'o:D:T:n:d:hv' )
 
   except getopt.GetoptError:
     eprint( "FATAL : error analyzing command line options" )
@@ -98,6 +101,22 @@ def checkOptions( pListParams ) :
       lsVal = lOpt[1]
       global gsOutput
       gsOutput = lsVal
+    elif lOpt[0] == "-D" :
+      lsVal = lOpt[1]
+      try :
+        lDTval = datetime.strptime( lsVal, "%H:%M:%S" )
+      except :
+        eprint( "FATAL: %s not a valid ISO-format duration (max is 23:59:59)" % lsVal )
+        eprint( "" )
+        usage()
+        sys.exit( 1 )
+      lDTzero = datetime.strptime( "00:00:00", "%H:%M:%S" )
+      print "lDTzero:", lDTzero
+      if not lDTval == None :
+        global gDurationNew
+        gDurationNew = lDTval - lDTzero
+        print "gDurationNew :", gDurationNew
+        #print "gDurationNew :", gDurationNew.__class__
     elif lOpt[0] == "-T" :
       lsVal = lOpt[1]
       try :
@@ -126,6 +145,7 @@ def dispPoint( pPoint ) :
 def resetTrackTime() :
   global giWhich
   global gDTnew
+  lDurationNew = None
   lTimeIni = None
   liTrack = 0
   for lTrack in gXmlGPX.tracks:
@@ -136,12 +156,28 @@ def resetTrackTime() :
       if not liTrack == giWhich :
         print "skip track #%d" % liTrack
         continue
+      else :
+        global gDurationNew
+        if not gDurationNew == None :
+          lDurationNew = gDurationNew
+          print "will adjust track time to fit into a %s duration" % ( str( gDurationNew ) )
+        else :
+          print "track time will just be shifted (duration won't be changed)"
 
     print "============="
     print "track #%d name:%s:" % ( liTrack, lTrack.name )
     liSegment = 0
     for lSegment in lTrack.segments:
       liSegment += 1
+
+      # TODO : count points for all segments first, for splitting time
+      # <trkseg>
+      if not lDurationNew == None :
+        liPoints = len( lSegment.points )
+        lTDpoint = lDurationNew / liPoints
+        lDTaccu = timedelta( 0 )
+        print "points = %d, point Timedelta: %s" % ( liPoints, str( lTDpoint ) )
+        print "lDTaccu:", lDTaccu
 
       # empty segment for the 
       #lSegmentOut = gpx.GPXTrackSegment()
@@ -159,9 +195,16 @@ def resetTrackTime() :
           print "new initial time:", lDTnew
           lTimeIni = lDTnew
         dispPoint( lPoint )
-        print "--"
+        print "=>"
         #lPoint2 = gpx.GPXTrackPoint()
-        lPoint.time += lTdiff
+        if lDurationNew == None :
+          lPoint.time += lTdiff
+        else :
+          lPoint.time = gDTnew
+          lPoint.time += lDTaccu
+          lDTaccu += lTDpoint
+          print "lDTaccu:", lDTaccu
+        dispPoint( lPoint )
         print "----"
       print "end of segment #%d, lTrack #%d" % ( liSegment, liTrack )
       print "----"
@@ -247,6 +290,7 @@ giWhich = 0
 gsFileGPX = None
 gsOutput = None
 gDTnew = None
+gDurationNew = None
 
 liArgs = len( sys.argv )
 if liArgs < 2 :
