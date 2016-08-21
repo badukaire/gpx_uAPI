@@ -16,7 +16,9 @@ def eprint( sErrorMsg ) :
 # TODO : when classifying, use a __doc__ string
 def usage() :
 
-  print "displays/edits a GPX file"
+  print ""
+  print "----------"
+  print "gpxX.py : displays/edits a GPX file"
   print "the file can be a parameter (after options) or stdin"
   print ""
   print "options :"
@@ -29,7 +31,7 @@ def usage() :
   print "* -T <datetime>: reset initial time to provided ISO-format datetime"
   print "* -D <duration>: track duration (-n must be specified / max 24h)"
   print ""
-  print "Examples:"
+  print "Examples: (must have at least a -d or -D/-T or -X option)"
   print "python gpxX.py -h"
   print "python gpxX.py -d w"
   print "python gpxX.py -d waypoints -d t"
@@ -47,8 +49,7 @@ def checkOptions( pListParams ) :
     lOptList, lList = getopt.getopt( pListParams, 'o:D:T:s:n:d:hv' )
 
   except getopt.GetoptError:
-    eprint( "FATAL : error analyzing command line options" )
-    eprint( "" )
+    eprint( "FATAL : error analyzing command line options (unknown/bad formatted option?)" )
     usage()
     sys.exit( 1 )
 
@@ -70,15 +71,15 @@ def checkOptions( pListParams ) :
       try :
         liVal = int( lsVal )
       except :
-        eprint( "FATAL: %s not a valid segment number" % lsVal )
-        eprint( "" )
+        eprint( "FATAL: %s not a valid segment number (-s)" % lsVal )
         usage()
         sys.exit( 1 )
       if liVal > 0 :
         global giSegment
         giSegment = liVal
+        print "segment (-s) set to %d" % ( giSegment )
       else :
-        eprint( "FATAL: %d must be >= 1" % liVal )
+        eprint( "FATAL: %d (-s) must be >= 1" % liVal )
         usage()
         sys.exit( 1 )
     elif lOpt[0] == "-n" :
@@ -86,15 +87,15 @@ def checkOptions( pListParams ) :
       try :
         liVal = int( lsVal )
       except :
-        eprint( "FATAL: %s not a valid number" % lsVal )
-        eprint( "" )
+        eprint( "FATAL: %s (-n) not a valid number" % lsVal )
         usage()
         sys.exit( 1 )
       if liVal > 0 :
         global giWhich
         giWhich = liVal
+        print "item (-n) set to %d" % ( giWhich )
       else :
-        eprint( "FATAL: %d must be >= 1" % liVal )
+        eprint( "FATAL: %d (-n) must be >= 1" % liVal )
         usage()
         sys.exit( 1 )
     elif lOpt[0] == "-d" :
@@ -102,56 +103,60 @@ def checkOptions( pListParams ) :
       if lsVal == "w" or lsVal == "waypoints" :
         global gbDispWaypts
         gbDispWaypts = True
+        print "will display (-d) waypoints"
       elif lsVal == "t" or lsVal == "tracks" :
         global gbDispTracks
         gbDispTracks = True
+        print "will display (-d) tracks/segments"
       elif lsVal == "r" or lsVal == "routes" :
         global gbDispRoutes
         gbDispRoutes = True
+        print "will display (-d) routes"
       else :
-        eprint( "FATAL: Invalid item to display %s" % lsVal )
-        eprint( "==========" )
-        eprint( "" )
+        eprint( "FATAL: Invalid item (-d) to display %s" % lsVal )
         usage()
         sys.exit( 1 )
     elif lOpt[0] == "-o" :
       lsVal = lOpt[1]
       global gsOutput
       gsOutput = lsVal
+      print "output file (-o) : %s" % ( gsOutput )
     elif lOpt[0] == "-D" :
       lsVal = lOpt[1]
       try :
         lDTval = datetime.strptime( lsVal, "%H:%M:%S" )
       except :
-        eprint( "FATAL: %s not a valid ISO-format duration (max is 23:59:59)" % lsVal )
-        eprint( "" )
+        eprint( "FATAL: %s (-D) not a valid ISO-format duration (max is 23:59:59)" % lsVal )
         usage()
         sys.exit( 1 )
-      lDTzero = datetime.strptime( "00:00:00", "%H:%M:%S" )
-      print "lDTzero:", lDTzero
+      #print "gDTzero:", gDTzero
       if not lDTval == None :
         global gDurationNew
-        gDurationNew = lDTval - lDTzero
-        print "gDurationNew :", gDurationNew
+        gDurationNew = lDTval - gDTzero
+        print "duration (-D) to set :", gDurationNew
         #print "gDurationNew :", gDurationNew.__class__
     elif lOpt[0] == "-T" :
       lsVal = lOpt[1]
       try :
         lDTval = datetime.strptime( lsVal, "%Y-%m-%d %H:%M:%S" )
       except :
-        eprint( "FATAL: %s not a valid ISO-format datetime" % lsVal )
-        eprint( "" )
+        eprint( "FATAL: %s (-T) not a valid ISO-format datetime" % lsVal )
         usage()
         sys.exit( 1 )
       if not lDTval == None :
         global gDTnew
         gDTnew = lDTval
-        print "gDTnew :", gDTnew
+        print "date (-T) to reset to :", gDTnew
 
   #print "loop finished, lList => ", lList
-  if len( lList ) > 0 :
+  liLenList = len( lList )
+  if liLenList > 0 :
     gsFileGPX = lList[ 0 ]
-    print "will read file %s" % gsFileGPX
+    print "input will be read from file %s" % gsFileGPX
+    if liLenList > 1 :
+      print "the following %d files will be ignored" % ( liLenList - 1 )
+      #gsFileGPX = lList[ 0 ]
+
 
 
 def dispPoint( pPoint ) :
@@ -160,6 +165,7 @@ def dispPoint( pPoint ) :
 
 
 def resetTrackTime() :
+  lbOK = True
   global giSegment
   global giWhich
   global gDTnew
@@ -207,7 +213,7 @@ def resetTrackTime() :
         print "points = %d, point Timedelta: %s" % ( liPoints, str( lTDpoint ) )
         print "lDTaccu:", lDTaccu
 
-      # empty segment for the 
+      # empty segment for the
       #lSegmentOut = gpx.GPXTrackSegment()
       print "--"
       print "segment #%d, track #%d" % ( liSegment, liTrack )
@@ -248,11 +254,13 @@ def resetTrackTime() :
     lFileOut = open( gsOutput, "w" )
   except :
     eprint( "FATAL, can not open output file %s, quitting ..." % ( gsOutput ) )
-    sys.exit( 1 )
+    lbOK = False
 
   lFileOut.write( gXmlGPX.to_xml() )
   lFileOut.close()
   print "new XML written into %s file" % ( gsOutput )
+
+  return lbOK
 
 
 def dispTracks() :
@@ -306,7 +314,7 @@ def dispWaypts() :
     print "-- comment:", lWaypoint.comment
     print "-- description:", lWaypoint.description
     print "-- symbol:", lWaypoint.symbol
-    
+
 
 def dispRoutes() :
   liRoute = 0
@@ -316,6 +324,68 @@ def dispRoutes() :
     print "Route: #%d" % ( liRoute )
     for lPoint in lRoute.points:
       dispPoint( lPoint )
+
+def display() :
+  global gbDispWaypts, gbDispTracks, gbDispRoutes
+
+  if gbDispTracks == True :
+    print "================"
+    print "display Tracks ..."
+    dispTracks()
+    print ""
+    print "Tracks displayed"
+    print "================"
+    print ""
+  if gbDispWaypts == True :
+    print "================"
+    print "display Waypts ..."
+    dispWaypts()
+    print ""
+    print "Waypts displayed"
+    print "================"
+    print ""
+  if gbDispRoutes == True :
+    print "================"
+    print "display Routes ..."
+    dispRoutes()
+    print ""
+    print "Routes displayed"
+    print "================"
+    print ""
+
+def setOpenFile( psFileGPX ) :
+  """
+  psFileGPX : input, the file name (string)
+  lFileGPX : output, the file descriptor (None if error)
+  """
+  lFileGPX = None
+  if not psFileGPX == None :
+    try :
+      lFileGPX = open( psFileGPX, "r" )
+    except :
+      eprint( "FATAL: could not open file %s, quitting ..." % ( gsFileGPX ) )
+  else :
+    eprint( "NO GPX file provided, read from stdin ..." )
+    lFileGPX = sys.stdin
+  return lFileGPX
+
+
+def parseGpxFile( pFileGPX ) :
+  """
+  pFileGPX : input, the file
+  lXmlGPX : output, the parsed content (None if error)
+  """
+  lXmlGPX = None
+  try :
+    lXmlGPX = gpxpy.parse( pFileGPX )
+    pFileGPX.close()
+    print "file read and parsed OK"
+
+  except :
+    eprint( "FATAL: Error parsing GPX data" )
+    raise
+
+  return lXmlGPX
 
 # main starts here
 
@@ -331,77 +401,34 @@ gsOutput = None
 gDTnew = None
 gDurationNew = None
 
-liArgs = len( sys.argv )
-if liArgs < 2 :
-  # FIXME : if just -v, would be the same case
-  # FIXME : this is not a good way
-  print "NO params provided => will read from stdin and display everything"
-  lFileGPX = sys.stdin
-  gbDispTracks = True
-  gbDispWaypts = True
-  gbDispRoutes = True
-else : # stdin, display everything, dont transform
-  checkOptions( sys.argv[ 1 : ] )
+gDTzero = datetime.strptime( "00:00:00", "%H:%M:%S" )
+gTdiffZero = gDTzero - gDTzero
 
-if not gsFileGPX == None :
-  try :
-    lFileGPX = open( gsFileGPX, "r" )
-  except :
-    eprint( "FATAL: could not open file %s, quitting ..." % ( gsFileGPX ) )
+# if no params, this should return []
+lListParams = sys.argv[ 1 : ]
+
+# TODO : find way to remove dumb if
+if not lListParams == None :
+
+  checkOptions( lListParams )
+  lbOptsOK = validateOptions()
+  if lbOptsOK == False :
+    usage()
     sys.exit( 1 )
-else :
-  eprint( "NO GPX file provided, read from stdin ..." )
-  lFileGPX = sys.stdin
+  # TODO : use a backup of gsXformFile when reading the file for unsetting and validating
 
-
-try :
-  gXmlGPX = gpxpy.parse( lFileGPX )
-  lFileGPX.close()
-  print "file read and parsed OK"
-
-except :
-  eprint( "FATAL: Error parsing GPX data" )
-  raise
+gFileGPX = setOpenFile( gsFileGPX )
+if gFileGPX == None :
   sys.exit( 1 )
 
+gXmlGPX = parseGpxFile( gFileGPX )
+if gXmlGPX == None :
+  sys.exit( 1 )
 
 if gbDispTracks == False and gbDispWaypts == False and gbDispRoutes == False :
-  print "NOT displaying anything"
-  print "transforming GPX data? ..."
-  if gDTnew == None :
-    eprint( "FATAL, can't transform data, need to have a datetime to reset (-T option)" )
-    eprint( "" )
-    usage()
+  print "transform GPX data ..."
+  if resetTrackTime() == False :
     sys.exit( 1 )
-  if gsOutput == None :
-    eprint( "FATAL, can't transform data, need to have an output file (-o option)" )
-    eprint( "" )
-    usage()
-    sys.exit( 1 )
-  resetTrackTime()
-else :
- if gbDispTracks == True :
-  print "================"
-  print "display Tracks ..."
-  dispTracks()
-  print ""
-  print "Tracks displayed"
-  print "================"
-  print ""
- if gbDispWaypts == True :
-  print "================"
-  print "display Waypts ..."
-  dispWaypts()
-  print ""
-  print "Waypts displayed"
-  print "================"
-  print ""
- if gbDispRoutes == True :
-  print "================"
-  print "display Routes ..."
-  dispRoutes()
-  print ""
-  print "Routes displayed"
-  print "================"
-  print ""
+else : # display
+  display()
 
