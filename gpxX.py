@@ -542,6 +542,47 @@ def display() :
     print ""
 
 
+def unsplitOptParams( pss ) :
+
+  print "-------------------"
+  print "unsplitOptParams"
+  lssRet = []
+  print pss
+  if pss[ 0 ].startswith( "-" ) :
+    i = 0
+    liRemaining = len( pss[ i : ] )
+    while liRemaining > 0 and pss[ i ].startswith( "-" ) :
+      print "i=%d, pss[ %d ]:%s: remaining=%d" % ( i, i, pss[ i ], liRemaining )
+      if len( pss[ i : ] ) > 1 :
+        lss = ""
+        liJoined = 1
+        for ls in pss[ i + liJoined : ] :
+          print "ls:%s: joined=%d" % ( ls, liJoined )
+          if ls.startswith( "-" ) :
+            print "break"
+            liJoined -= 1
+            break
+          lss += " " + ls
+          liJoined += 1
+          print "lss:%s: joined=%d" % ( lss, liJoined )
+        lssU = [ pss[ i ], lss[ 1 : ] ]
+        print "lss:%s: => lssU:%s:" % ( lss, lssU )
+        lssRet.extend( lssU )
+      # if len ...
+      i += 1 + liJoined
+      liRemaining = len( pss[ i : ] )
+      print "=> i=%d, remaining=%d" % ( i, liRemaining )
+      print "----"
+    # while loop
+    print "leaving while, i=%d" % ( i )
+  else :
+    print "FATAL!"
+  print lssRet
+  print "unsplitOptParams OK"
+  print "-------------------"
+  return lssRet
+
+
 def readXformFile( psXformFile ) :
   """
   psXformFile : input, the file name (string)
@@ -566,14 +607,15 @@ def readXformFile( psXformFile ) :
       # TODO : check if some option "-?" has more than 2 params => join with blank
       if len( lss ) > 0 :
         cleanXformOpts()
-        checkOptions( lss ) # this may exit!
-        if validateOptionsXform() == False :
-          print "line #%d validation on file %s failed" % ( liLine, psXformFile )
-          lbOK = False
-          #break
-        else :
-          lList.append( lss )
-          #print lList
+        lss2 = unsplitOptParams( lss )
+        #checkOptions( lss2 ) # this may exit!
+        #if validateOptionsXform() == False :
+        #  print "line #%d validation on file %s failed" % ( liLine, psXformFile )
+        #  lbOK = False
+        #  #break
+        #else :
+        #  lList.append( lss )
+        #  #print lList
     else :
       print "# ..."
     print "--"
@@ -583,6 +625,11 @@ def readXformFile( psXformFile ) :
     lListXforms = lList
   else :
     print "ERROR, command file reading failed"
+
+  # TODO debug, remove
+  sys.exit( 0 )
+  # TODO debug, remove
+
   return lListXforms
 
 
