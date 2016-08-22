@@ -422,7 +422,11 @@ def writeOutput() :
 def dispTracks() :
   lTimeIni = None
   liTrack = 0
-  for lTrack in gXmlGPX.tracks:
+  for lTrack in gXmlGPX.tracks :
+    liPoints = 0
+    lTimeIni = None
+    lTimeEnd = None
+    lTrackTdiff = gTdiffZero
     liTrack += 1
     global giWhich
     if giWhich > 0 :
@@ -433,7 +437,9 @@ def dispTracks() :
     print "============="
     print "track #%d name:%s:" % ( liTrack, lTrack.name )
     liSegment = 0
-    for lSegment in lTrack.segments:
+    for lSegment in lTrack.segments :
+      lTimeSegIni = None
+      lTimeSegEnd = None
       liSegment += 1
       print "segment #%d ..." % liSegment
       print "--"
@@ -443,26 +449,45 @@ def dispTracks() :
         if not liSegment == giSegment :
           print "skip segment #%d" % liSegment
           continue
-      print "segment #%d, track #%d" % ( liSegment, liTrack )
-      for lPoint in lSegment.points:
-        if lTimeIni == None :
-          lTimeIni = lPoint.time
-          print "lTimeIni =", lTimeIni
-        dispPoint( lPoint )
-        lTimeEnd = lPoint.time
+      liSegPoints = len( lSegment.points )
+      liPoints += liSegPoints
+      print "segment #%d, track #%d => %d points" % ( liSegment, liTrack, liSegPoints )
+      for lPoint in lSegment.points :
+        if lTimeSegIni == None :
+          lTimeSegIni = lPoint.time
+          if lTimeIni == None :
+            lTimeIni = lTimeSegIni
+          print "lTimeSegIni =", lTimeSegIni
+        if gbVerbose == True :
+          dispPoint( lPoint )
+        lTimeSegEnd = lPoint.time
+        lTimeEnd = lTimeSegEnd
+      if lTimeSegEnd == None or lTimeSegIni == None :
+        print "no time lapse for segment %d, track #%d" % ( liSegment, liTrack )
+        lSegTdiff = gTdiffZero
+      else :
+        lSegTdiff = lTimeSegEnd - lTimeSegIni
+        print "start time: %s - end time: %s (segment)" % ( str( lTimeSegIni ), str( lTimeSegEnd ) )
+        print "time lapse: %s (segment %d, track #%d)" % ( str( lSegTdiff ), liSegment, liTrack )
+      lTrackTdiff += lSegTdiff
+
       print "end of segment #%d, lTrack #%d" % ( liSegment, liTrack )
       print "----"
     print "end of track #%d" % ( liTrack )
-    lTdiff = lTimeEnd - lTimeIni
-    print "start time: %s - end time: %s" % ( str( lTimeIni ), str( lTimeEnd ) )
-    print "time lapse: %s" % ( str( lTdiff ) )
+    print "total points = %d" % ( liPoints )
+    if lTimeEnd == None or lTimeIni == None :
+      print "no time lapse for track #%d" % ( liTrack )
+    else :
+      print "start time: %s - end time: %s" % ( str( lTimeIni ), str( lTimeEnd ) )
+      print "diff time lapse (IniToEnd): %s (track #%d)" % ( str( lTimeEnd - lTimeIni ), liTrack )
+      print "accu time lapse (segments): %s (track #%d)" % ( str( lTrackTdiff ), liTrack )
     print "--------"
     print ""
 
 
 def dispWaypts() :
   liWaypt = 0
-  for lWaypoint in gXmlGPX.waypoints:
+  for lWaypoint in gXmlGPX.waypoints :
     liWaypt += 1
     print "============="
     print "waypoint #%d" % ( liWaypt )
@@ -474,12 +499,19 @@ def dispWaypts() :
 
 def dispRoutes() :
   liRoute = 0
-  for lRoute in gXmlGPX.routes:
+  for lRoute in gXmlGPX.routes :
     liRoute += 1
     print "============="
     print "Route: #%d" % ( liRoute )
-    for lPoint in lRoute.points:
-      dispPoint( lPoint )
+    liPoints = lRoute.points
+    for lPoint in lRoute.points :
+      if gbVerbose == True :
+        dispPoint( lPoint )
+    print "end of route #%d" % ( liRoute )
+    print "total points = %d" % ( liPoints )
+    print "--------"
+    print ""
+
 
 def display() :
   global gbDispWaypts, gbDispTracks, gbDispRoutes
