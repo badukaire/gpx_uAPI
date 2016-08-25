@@ -136,6 +136,7 @@ The output displays the speed for each set in m/s, km/h and mins/km (pace).
     except :
       print >> sys.stderr, 'syntax error parsing secs :', lsSec
       return None, None
+    # TODO : do not allow seconds larger than 60
     liSecs = liMin * 60 + liSec
     return liSecs, lbRelTime
 
